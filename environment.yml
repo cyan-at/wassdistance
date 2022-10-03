@@ -1,4 +1,4 @@
-name: pytorch
+name: wassdistance
 channels:
   - pytorch
   - conda-forge
@@ -65,7 +65,7 @@ dependencies:
   - numpy=1.15.4=py37h7e9f1db_0
   - numpy-base=1.15.4=py37hde5b4d6_0
   - olefile=0.46=py37_0
-  - openssl=1.1.1=h7b6447c_0
+  - openssl
   - pandoc=2.2.3.2=0
   - pandocfilters=1.4.2=py37_1
   - parso=0.3.2=py37_0
