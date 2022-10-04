@@ -27,8 +27,6 @@ class SinkhornDistance(nn.Module):
         self.reduction = reduction
 
     def forward(self, C, mu, nu):
-        # C = f(x, y)
-
         u = torch.zeros_like(mu)
         v = torch.zeros_like(nu)
         # To check if algorithm terminates because of threshold
@@ -78,3 +76,47 @@ class SinkhornDistance(nn.Module):
     def ave(u, u1, tau):
         "Barycenter subroutine, used by kinetic acceleration through extrapolation."
         return tau * u + (1 - tau) * u1
+
+class SinkhornDistance2(SinkhornDistance):
+    def forward(self, C, mu, nu):
+        # import ipdb; ipdb.set_trace()
+
+        u = torch.zeros_like(mu)
+        v = torch.zeros_like(nu)
+        # To check if algorithm terminates because of threshold
+        # or max iterations reached
+        actual_nits = 0
+        # Stopping criterion
+        thresh = 1e-1
+
+        M_temp = torch.zeros_like(C)
+
+        # Sinkhorn iterations
+        for i in range(self.max_iter):
+            u1 = u  # useful to check the update
+            M_temp.data = torch.einsum('ij,i,j->ij', -C, u, v) / self.eps
+            u = self.eps * (torch.log(mu+1e-8) - torch.logsumexp(M_temp, dim=-1)) + u
+
+            M_temp.data = torch.einsum('ij,i,j->ij', -C, u, v) / self.eps
+            v = self.eps * (torch.log(nu+1e-8) - torch.logsumexp(M_temp.transpose(-2, -1), dim=-1)) + v
+
+            err = (u - u1).abs().sum(-1).mean()
+
+            actual_nits += 1
+            if err.item() < thresh:
+                break
+
+        # U, V = u, v
+        # Transport plan pi = diag(a)*K*diag(b)
+
+        M_temp.data = torch.einsum('ij,i,j->ij', -C, u, v) / self.eps
+        pi = torch.exp(M_temp)
+        # Sinkhorn distance
+        cost = torch.sum(pi * C, dim=(-2, -1))
+
+        if self.reduction == 'mean':
+            cost = cost.mean()
+        elif self.reduction == 'sum':
+            cost = cost.sum()
+
+        return cost, pi, C
