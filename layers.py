@@ -62,7 +62,9 @@ class SinkhornDistance(nn.Module):
     def M(self, C, u, v):
         "Modified cost for logarithmic updates"
         "$M_{ij} = (-c_{ij} + u_i + v_j) / \epsilon$"
-        return (-C + u.unsqueeze(-1) + v.unsqueeze(-2)) / self.eps
+        # return (-C + u.unsqueeze(-1) + v.unsqueeze(-2)) / self.eps
+        # return -C / self.eps
+        return (-C + u.expand(u.shape[0], u.shape[0]) + torch.transpose(u.expand(u.shape[0], u.shape[0]), 0, 1)) / self.eps
 
     @staticmethod
     def _cost_matrix(x, y, p=2):
@@ -94,10 +96,15 @@ class SinkhornDistance2(SinkhornDistance):
         # Sinkhorn iterations
         for i in range(self.max_iter):
             u1 = u  # useful to check the update
-            M_temp.data = torch.einsum('ij,i,j->ij', -C, u, v) / self.eps
+            M_temp = self.M(C, u, v)
+
+            # import ipdb; ipdb.set_trace()
+
             u = self.eps * (torch.log(mu+1e-8) - torch.logsumexp(M_temp, dim=-1)) + u
 
-            M_temp.data = torch.einsum('ij,i,j->ij', -C, u, v) / self.eps
+            del M_temp
+            M_temp = self.M(C, u, v)
+
             v = self.eps * (torch.log(nu+1e-8) - torch.logsumexp(M_temp.transpose(-2, -1), dim=-1)) + v
 
             err = (u - u1).abs().sum(-1).mean()
@@ -109,7 +116,9 @@ class SinkhornDistance2(SinkhornDistance):
         # U, V = u, v
         # Transport plan pi = diag(a)*K*diag(b)
 
-        M_temp.data = torch.einsum('ij,i,j->ij', -C, u, v) / self.eps
+        del M_temp
+        M_temp = self.M(C, u, v)
+
         pi = torch.exp(M_temp)
         # Sinkhorn distance
         cost = torch.sum(pi * C, dim=(-2, -1))
