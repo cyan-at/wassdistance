@@ -62,9 +62,9 @@ class SinkhornDistance(nn.Module):
     def M(self, C, u, v):
         "Modified cost for logarithmic updates"
         "$M_{ij} = (-c_{ij} + u_i + v_j) / \epsilon$"
-        # return (-C + u.unsqueeze(-1) + v.unsqueeze(-2)) / self.eps
+        return (-C + u.unsqueeze(-1) + v.unsqueeze(-2)) / self.eps
         # return -C / self.eps
-        return (-C + u.expand(u.shape[0], u.shape[0]) + torch.transpose(u.expand(u.shape[0], u.shape[0]), 0, 1)) / self.eps
+        # return (-C + u.expand(u.shape[0], u.shape[0]) + torch.transpose(u.expand(u.shape[0], u.shape[0]), 0, 1)) / self.eps
 
     @staticmethod
     def _cost_matrix(x, y, p=2):
